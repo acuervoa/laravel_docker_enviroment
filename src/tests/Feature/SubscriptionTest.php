@@ -3,7 +3,6 @@
 namespace Tests\Feature;
 
 use Illuminate\Foundation\Testing\RefreshDatabase;
-use Illuminate\Foundation\Testing\WithFaker;
 use Tests\TestCase;
 use App\Models\User;
 use App\Models\Channel;
@@ -16,7 +15,6 @@ class SubscriptionTest extends TestCase
     protected function setUp(): void
     {
         parent::setUp();
-
         $this->user = User::factory()->create();
         $this->actingAs($this->user);
     }
@@ -25,10 +23,11 @@ class SubscriptionTest extends TestCase
     {
         $channel = Channel::factory()->create();
 
-        $response = $this->post('/subscribe', ['youtube_id' => $channel->youtube_id]);
+        $response = $this->post('/subscribe', [
+            'youtube_id' => $channel->youtube_id,
+        ]);
 
         $response->assertStatus(201);
-
         $this->assertDatabaseHas('subscriptions', [
             'user_id' => $this->user->id,
             'channel_id' => $channel->id,
@@ -37,30 +36,28 @@ class SubscriptionTest extends TestCase
 
     public function test_user_can_unsubscribe_from_channel()
     {
-        $user = User::factory()->create();
         $channel = Channel::factory()->create();
-        $subscription = Subscription::create(['user_id' => $user->id,'channel_id' => $channel->id]);
+        $subscription = Subscription::create(['user_id' => $this->user->id, 'channel_id' => $channel->id]);
 
-        $this->actingAs($user)
-            ->delete("/unsubscribe/{$channel->id}")
-            ->assertStatus(204);
+        $response = $this->delete('/unsubscribe/' . $channel->id);
 
+        $response->assertStatus(204);
         $this->assertDatabaseMissing('subscriptions', [
-            'user_id' => $user->id,
+            'user_id' => $this->user->id,
             'channel_id' => $channel->id,
         ]);
-
     }
 
     public function test_user_can_view_subscriptions()
     {
-        $user= User::factory()->create();
-        $channel = Channel::factory()->create();
-        $subscription =Subscription::create(['user_id' => $user->id, 'channel_id' => $channel->id]);
+        $subscription = Subscription::factory()->create(['user_id' => $this->user->id]);
 
-        $this->actingAs($user)
-             ->get('/subscriptions')
-             ->assertStatus(200)
-         ->assertJsonStructure([['id', 'channel_id', 'user_id', 'created_at', 'updated_at']]);
+        $response = $this->get('/subscriptions');
+
+        $response->assertStatus(200)
+            ->assertJsonFragment([
+                'channel_id' => $subscription->channel_id,
+            ]);
     }
 }
+

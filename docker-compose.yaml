@@ -111,4 +111,12 @@ services:
       - 8025:8025
     networks:
       - laravel_enviroment
-
+  node:
+    image: node:latest
+    container_name: node_laravel_enviroment
+    volumes:
+      - ./src:/var/www/html
+    working_dir: /var/www/html
+    networks:
+      - laravel_enviroment
+    command: npm install

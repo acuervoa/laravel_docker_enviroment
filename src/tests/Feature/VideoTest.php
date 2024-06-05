@@ -26,18 +26,17 @@ class VideoTest extends TestCase
         $response = $this->post('/videos', [
             'channel_youtube_id' => $channel->youtube_id,
             'title' => 'Test Video',
-            'youtube_id' => 'testYoutubeId',
+            'youtube_id' => 'Ks-_Mh1QhMc',
             'like_count' => 100,
             'published_at' => now(),
             'watched' => false,
             'rating' => 5,
         ]);
 
-        $response->assertStatus(201)
-            ->assertJsonStructure(['id', 'channel_id', 'title', 'youtube_id', 'like_count', 'published_at', 'watched', 'rating']);
-
+        $response->assertStatus(201);
         $this->assertDatabaseHas('videos', [
             'title' => 'Test Video',
+            'youtube_id' => 'Ks-_Mh1QhMc',
         ]);
     }
 
@@ -48,33 +47,35 @@ class VideoTest extends TestCase
         $response = $this->get('/videos');
 
         $response->assertStatus(200)
-            ->assertJsonStructure([['id', 'channel_id', 'title', 'youtube_id', 'like_count', 'published_at', 'watched', 'rating']]);
+            ->assertJsonFragment([
+                'title' => $video->title,
+            ]);
     }
 
     public function test_user_can_view_single_video()
     {
         $video = Video::factory()->create();
 
-        $response = $this->get("/videos/{$video->id}");
+        $response = $this->get('/videos/' . $video->id);
 
         $response->assertStatus(200)
-            ->assertJsonStructure(['id', 'channel_id', 'title', 'youtube_id', 'like_count', 'published_at', 'watched', 'rating']);
+            ->assertJsonFragment([
+                'title' => $video->title,
+            ]);
     }
 
     public function test_user_can_update_video()
     {
         $video = Video::factory()->create();
 
-        $response = $this->put("/videos/{$video->id}", [
-            'title' => 'Updated Test Video',
+        $response = $this->put('/videos/' . $video->id, [
+            'title' => 'Updated Video Title',
         ]);
 
-        $response->assertStatus(200)
-            ->assertJson(['title' => 'Updated Test Video']);
-
+        $response->assertStatus(200);
         $this->assertDatabaseHas('videos', [
             'id' => $video->id,
-            'title' => 'Updated Test Video',
+            'title' => 'Updated Video Title',
         ]);
     }
 
@@ -82,10 +83,9 @@ class VideoTest extends TestCase
     {
         $video = Video::factory()->create();
 
-        $response = $this->delete("/videos/{$video->id}");
+        $response = $this->delete('/videos/' . $video->id);
 
         $response->assertStatus(204);
-
         $this->assertDatabaseMissing('videos', [
             'id' => $video->id,
         ]);

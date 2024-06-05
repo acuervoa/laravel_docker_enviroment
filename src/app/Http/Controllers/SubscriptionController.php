@@ -5,7 +5,7 @@ namespace App\Http\Controllers;
 use Illuminate\Http\Request;
 use App\Models\Channel;
 use App\Models\Subscription;
-use App\Models\User;
+use Illuminate\Support\Facades\Auth;
 
 class SubscriptionController extends Controller
 {
@@ -18,7 +18,7 @@ class SubscriptionController extends Controller
             }
 
             $subscription = Subscription::create([
-                'user_id' => auth()->id(),
+                'user_id' => Auth::id(),
                 'channel_id' => $channel->id,
             ]);
 
@@ -32,7 +32,7 @@ class SubscriptionController extends Controller
     public function unsubscribe($id)
     {
         try {
-            $subscription = Subscription::where('user_id', auth()->id())
+            $subscription = Subscription::where('user_id', Auth::id())
                 ->where('channel_id', $id)
                 ->first();
 
@@ -53,7 +53,7 @@ class SubscriptionController extends Controller
     public function index()
     {
         try{
-            $subscriptions = auth()->user()->subscriptions()->with('channel')->get();
+            $subscriptions = Auth::user()->subscriptions()->with('channel')->get();
 
             return response()->json($subscriptions);
         } catch (\Exception $e) {

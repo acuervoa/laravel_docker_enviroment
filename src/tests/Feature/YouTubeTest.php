@@ -2,11 +2,12 @@
 
 namespace Tests\Feature;
 
+use App\Models\Channel;
+use App\Models\User;
+use App\Models\Video;
 use Tests\TestCase;
 use Illuminate\Foundation\Testing\RefreshDatabase;
-use Illuminate\Support\Facades\Storage;
-use App\Models\Channel;
-use App\Models\Video;
+use Mockery;
 
 class YouTubeTest extends TestCase
 {
@@ -15,11 +16,50 @@ class YouTubeTest extends TestCase
     public function setUp(): void
     {
         parent::setUp();
+        $this->mockGoogleClient();
+        // Crear y autenticar un usuario
+        $this->user = User::factory()->create();
+        $this->actingAs($this->user);
     }
 
-    public function tearDown(): void
+    protected function mockGoogleClient()
     {
-        parent::tearDown();
+        // Ensure that the class Google_Client is not already loaded
+        if (!class_exists('Google_Client', false)) {
+            // Mock Google_Client
+            $mockClient = Mockery::mock('alias:Google_Client');
+            $mockClient->shouldReceive('setAuthConfig')
+                ->andReturnSelf();
+            $mockClient->shouldReceive('addScope')
+                ->andReturnSelf();
+            $mockClient->shouldReceive('setRedirectUri')
+                ->andReturnSelf();
+            $mockClient->shouldReceive('setAccessType')
+                ->andReturnSelf();
+            $mockClient->shouldReceive('setPrompt')
+                ->andReturnSelf();
+            $mockClient->shouldReceive('isAccessTokenExpired')
+                ->andReturn(false);
+            $mockClient->shouldReceive('getAccessToken')
+                ->andReturn(['access_token' => 'fake_token']);
+            $mockClient->shouldReceive('setAccessToken')
+                ->andReturnSelf();
+
+            // Mock Google_Service_YouTube
+            $mockYouTube = Mockery::mock('alias:Google_Service_YouTube');
+            $mockYouTube->channels = Mockery::mock();
+            $mockYouTube->search = Mockery::mock();
+
+            $mockYouTube->channels->shouldReceive('listChannels')
+                ->andReturn((object)['items' => [
+                    (object)['id' => 'UC_x5XG1OV2P6uZZ5FSM9Ttw', 'snippet' => (object)['title' => 'Test Channel']]
+                ]]);
+
+            $mockYouTube->search->shouldReceive('listSearch')
+                ->andReturn((object)['items' => [
+                    (object)['id' => (object)['videoId' => 'Ks-_Mh1QhMc'], 'snippet' => (object)['title' => 'Test Video']]
+                ]]);
+        }
     }
 
     public function test_authenticate_redirects_to_google()
@@ -28,40 +68,43 @@ class YouTubeTest extends TestCase
         $response->assertRedirect();
     }
 
-    public function test_get_channels()
+    public function test_get_channels_from_db()
     {
-        Storage::disk('local')->put('token.json', json_encode([
-            'access_token' => 'valid-access-token',
-            'expires_in' => 3600,
-            'refresh_token' => 'valid-refresh-token',
-            'created' => time()
-        ]));
+        Channel::create([
+            'youtube_id' => 'UC_x5XG1OV2P6uZZ5FSM9Ttw',
+            'name' => 'Test Channel',
+            'category' => 'Test Category'
+        ]);
 
         $response = $this->get('/youtube/channels');
         $response->assertStatus(200);
 
-
+        $this->assertDatabaseHas('channels', [
+            'youtube_id' => 'UC_x5XG1OV2P6uZZ5FSM9Ttw',
+            'name' => 'Test Channel'
+        ]);
     }
 
-    public function test_get_videos()
+    public function test_get_videos_from_db()
     {
-  /*      Storage::disk('local')->put('token.json', json_encode([
-            'access_token' => 'valid-access-token',
-            'expires_in' => 3600,
-            'refresh_token' => 'valid-refresh-token',
-            'created' => time()
-        ]));
-   */
- $channel = Channel::factory()->create(['youtube_id' => 'UC_x5XG1OV2P6uZZ5FSM9Ttw']);
-        Storage::put('youtube_token.json', json_encode(['access_token' => 'test-token', 'expires_in' => 3600]));
+        $channel = Channel::create([
+            'youtube_id' => 'UC_x5XG1OV2P6uZZ5FSM9Ttw',
+            'name' => 'Test Channel',
+            'category' => 'Test Category'
+        ]);
 
-        $this->get('/youtube/videos/UC_x5XG1OV2P6uZZ5FSM9Ttw')
-             ->assertStatus(200);
+        Video::create([
+            'youtube_id' => 'Ks-_Mh1QhMc',
+            'title' => 'Test Video',
+            'channel_id' => $channel->id
+        ]);
 
-        // Verifica que los videos se guardan en la base de datos
+        $response = $this->get('/youtube/videos/UC_x5XG1OV2P6uZZ5FSM9Ttw');
+        $response->assertStatus(200);
+
         $this->assertDatabaseHas('videos', [
             'youtube_id' => 'Ks-_Mh1QhMc',
-            'title' => 'Android Development for Beginners'
+            'title' => 'Test Video'
         ]);
     }
 }

@@ -6,6 +6,7 @@ use Illuminate\Http\Request;
 use App\Models\User;
 use App\Models\Channel;
 use App\Models\Video;
+use Illuminate\Support\Facades\Log;
 
 class NotificationController extends Controller
 {

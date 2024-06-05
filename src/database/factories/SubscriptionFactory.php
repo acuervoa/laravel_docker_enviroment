@@ -19,8 +19,8 @@ class SubscriptionFactory extends Factory
     public function definition(): array
     {
         return [
-            'user_id' => User::factory(),
-            'channel_id' => Channel::factory(),
+            'user_id' => \App\Models\User::factory(),
+            'channel_id' => \App\Models\Channel::factory(),
         ];
     }
 }
