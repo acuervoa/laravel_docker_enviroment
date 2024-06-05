@@ -10,7 +10,7 @@ services:
       context: .
       dockerfile: dockerfiles/nginx.dockerfile
     ports:
-      - 8080:80
+      - 9999:80
       # - 443:443
     volumes:
       - ./src:/var/www/html
