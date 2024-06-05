@@ -27,36 +27,40 @@ class YouTubeTest extends TestCase
     {
         if (!class_exists('Google_Client', false)) {
             $mockClient = Mockery::mock('alias:Google_Client');
-            $mockClient->shouldReceive('setAuthConfig')
-                ->andReturnSelf();
-            $mockClient->shouldReceive('addScope')
-                ->andReturnSelf();
-            $mockClient->shouldReceive('setRedirectUri')
-                ->andReturnSelf();
-            $mockClient->shouldReceive('setAccessType')
-                ->andReturnSelf();
-            $mockClient->shouldReceive('setPrompt')
-                ->andReturnSelf();
-            $mockClient->shouldReceive('isAccessTokenExpired')
-                ->andReturn(false);
-            $mockClient->shouldReceive('getAccessToken')
-                ->andReturn(['access_token' => 'fake_token']);
-            $mockClient->shouldReceive('setAccessToken')
-                ->andReturnSelf();
+            $mockClient->shouldReceive('setAuthConfig')->andReturnSelf();
+            $mockClient->shouldReceive('addScope')->andReturnSelf();
+            $mockClient->shouldReceive('setRedirectUri')->andReturnSelf();
+            $mockClient->shouldReceive('setAccessType')->andReturnSelf();
+            $mockClient->shouldReceive('setPrompt')->andReturnSelf();
+            $mockClient->shouldReceive('isAccessTokenExpired')->andReturn(false);
+            $mockClient->shouldReceive('getAccessToken')->andReturn(['access_token' => 'fake_token']);
+            $mockClient->shouldReceive('setAccessToken')->andReturnSelf();
 
             $mockYouTube = Mockery::mock('alias:Google_Service_YouTube');
-            $mockYouTube->channels = Mockery::mock();
+            $mockYouTube->subscriptions = Mockery::mock();
             $mockYouTube->search = Mockery::mock();
 
-            $mockYouTube->channels->shouldReceive('listChannels')
-                ->andReturn((object)['items' => [
-                    (object)['id' => 'UC_x5XG1OV2P6uZZ5FSM9Ttw', 'snippet' => (object)['title' => 'Test Channel']]
-                ]]);
+            $mockYouTube->subscriptions->shouldReceive('listSubscriptions')->andReturn((object)[
+                'items' => [
+                    (object)[
+                        'snippet' => (object)[
+                            'resourceId' => (object)['channelId' => 'UC_x5XG1OV2P6uZZ5FSM9Ttw'],
+                            'title' => 'Test Channel'
+                        ]
+                    ]
+                ],
+                'nextPageToken' => null
+            ]);
 
-            $mockYouTube->search->shouldReceive('listSearch')
-                ->andReturn((object)['items' => [
-                    (object)['id' => (object)['videoId' => 'Ks-_Mh1QhMc'], 'snippet' => (object)['title' => 'Test Video']]
-                ]]);
+            $mockYouTube->search->shouldReceive('listSearch')->andReturn((object)[
+                'items' => [
+                    (object)[
+                        'id' => (object)['videoId' => 'Ks-_Mh1QhMc'],
+                        'snippet' => (object)['title' => 'Test Video']
+                    ]
+                ],
+                'nextPageToken' => null
+            ]);
         }
     }
 
