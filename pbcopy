@@ -16,11 +16,11 @@ class YoutubeController extends Controller
 
     public function __construct()
     {
-        $this->client = $this->initializeGoogleClient();
+        $this->client = $this->getClient();
         $this->youtube = new Google_Service_YouTube($this->client);
     }
 
-    private function initializeGoogleClient(): Google_Client
+    private function getClient()
     {
         $client = new Google_Client();
         $client->setAuthConfig(storage_path('app/credentials.json'));
@@ -30,21 +30,16 @@ class YoutubeController extends Controller
         $client->setPrompt('select_account consent');
 
         if (Storage::exists('youtube_token.json')) {
-            $this->setAccessToken($client);
+            $token = json_decode(Storage::get('youtube_token.json'), true);
+            $client->setAccessToken($token);
+
+            if ($client->isAccessTokenExpired()) {
+                $client->fetchAccessTokenWithRefreshToken($client->getRefreshToken());
+                Storage::put('youtube_token.json', json_encode($client->getAccessToken()));
+            }
         }
 
         return $client;
-    }
-
-    private function setAccessToken(Google_Client $client): void
-    {
-        $token = json_decode(Storage::get('youtube_token.json'), true);
-        $client->setAccessToken($token);
-
-        if ($client->isAccessTokenExpired()) {
-            $client->fetchAccessTokenWithRefreshToken($client->getRefreshToken());
-            Storage::put('youtube_token.json', json_encode($client->getAccessToken()));
-        }
     }
 
     public function authenticate(Request $request)
@@ -52,12 +47,14 @@ class YoutubeController extends Controller
         $client = $this->client;
 
         if (!$request->has('code')) {
-            return redirect()->away($client->createAuthUrl());
+            $authUrl = $client->createAuthUrl();
+            return redirect()->away($authUrl);
+        } else {
+            $client->authenticate($request->input('code'));
+            $token = $client->getAccessToken();
+            Storage::put('youtube_token.json', json_encode($token));
+            return redirect()->route('youtube.channels');
         }
-
-        $client->authenticate($request->input('code'));
-        Storage::put('youtube_token.json', json_encode($client->getAccessToken()));
-        return redirect()->route('youtube.channels');
     }
 
     public function getChannels()
@@ -69,17 +66,19 @@ class YoutubeController extends Controller
         foreach ($channelsResponse->getItems() as $channel) {
             Channel::updateOrCreate(
                 ['youtube_id' => $channel->getId()],
-                ['name' => $channel->getSnippet()->getTitle(), 'category' => 'Uncategorized']
+                [
+                    'name' => $channel->getSnippet()->getTitle(),
+                    'category' => 'Uncategorized',
+                ]
             );
         }
 
         return response()->json($channelsResponse);
     }
 
-    public function getVideos(string $channelId)
+    public function getVideos($channelId)
     {
-        $channel = Channel::where('youtube_id', $channelId)->firstOrFail();
-        $existingVideoIds = $channel->videos->pluck('youtube_id')->toArray();
+        $existingVideos = Video::where('channel_id', Channel::where('youtube_id', $channelId)->first()->id)->pluck('youtube_id')->toArray();
 
         $videosResponse = $this->youtube->search->listSearch('snippet', [
             'channelId' => $channelId,
@@ -89,10 +88,13 @@ class YoutubeController extends Controller
 
         foreach ($videosResponse->getItems() as $video) {
             $videoId = $video->getId()->getVideoId();
-            if (!in_array($videoId, $existingVideoIds)) {
+            if (!in_array($videoId, $existingVideos)) {
                 Video::updateOrCreate(
                     ['youtube_id' => $videoId],
-                    ['channel_id' => $channel->id, 'title' => $video->getSnippet()->getTitle()]
+                    [
+                        'channel_id' => Channel::where('youtube_id', $channelId)->first()->id,
+                        'title' => $video->getSnippet()->getTitle(),
+                    ]
                 );
             }
         }

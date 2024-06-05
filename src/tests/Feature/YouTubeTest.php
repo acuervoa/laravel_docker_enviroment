@@ -13,20 +13,19 @@ class YouTubeTest extends TestCase
 {
     use RefreshDatabase;
 
-    public function setUp(): void
+    private $user;
+
+    protected function setUp(): void
     {
         parent::setUp();
         $this->mockGoogleClient();
-        // Crear y autenticar un usuario
         $this->user = User::factory()->create();
         $this->actingAs($this->user);
     }
 
-    protected function mockGoogleClient()
+    protected function mockGoogleClient(): void
     {
-        // Ensure that the class Google_Client is not already loaded
         if (!class_exists('Google_Client', false)) {
-            // Mock Google_Client
             $mockClient = Mockery::mock('alias:Google_Client');
             $mockClient->shouldReceive('setAuthConfig')
                 ->andReturnSelf();
@@ -45,7 +44,6 @@ class YouTubeTest extends TestCase
             $mockClient->shouldReceive('setAccessToken')
                 ->andReturnSelf();
 
-            // Mock Google_Service_YouTube
             $mockYouTube = Mockery::mock('alias:Google_Service_YouTube');
             $mockYouTube->channels = Mockery::mock();
             $mockYouTube->search = Mockery::mock();
@@ -62,13 +60,13 @@ class YouTubeTest extends TestCase
         }
     }
 
-    public function test_authenticate_redirects_to_google()
+    public function test_authenticate_redirects_to_google(): void
     {
         $response = $this->get('/youtube/authenticate');
         $response->assertRedirect();
     }
 
-    public function test_get_channels_from_db()
+    public function test_get_channels_from_db(): void
     {
         Channel::create([
             'youtube_id' => 'UC_x5XG1OV2P6uZZ5FSM9Ttw',
@@ -85,7 +83,7 @@ class YouTubeTest extends TestCase
         ]);
     }
 
-    public function test_get_videos_from_db()
+    public function test_get_videos_from_db(): void
     {
         $channel = Channel::create([
             'youtube_id' => 'UC_x5XG1OV2P6uZZ5FSM9Ttw',
