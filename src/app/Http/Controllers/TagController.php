@@ -12,35 +12,36 @@ class TagController extends Controller
 {
     public function addTag(Request $request)
     {
-        $tag = Tag::create($request->all());
+        $tag = Tag::create($request->validate([
+            'name' => 'required|string|max:255',
+        ]));
+
         return response()->json($tag, 201);
     }
 
     public function attachTagToVideo(Request $request, $videoId)
     {
-        $video = Video::find($videoId);
-        $tag = Tag::find($request->input('tag_id'));
-        $video->tags()->attach($tag);
-
-        return response()->json(['message' => 'Tag attached to video']);
+        return $this->attachTag($request, Video::class, $videoId);
     }
 
     public function attachTagToChannel(Request $request, $channelId)
     {
-        $channel = Channel::find($channelId);
-        $tag = Tag::find($request->input('tag_id'));
-        $channel->tags()->attach($tag);
-
-        return response()->json(['message' => 'Tag attached to channel']);
+        return $this->attachTag($request, Channel::class, $channelId);
     }
 
     public function attachTagToList(Request $request, $listId)
     {
-        $list = VideoList::find($listId);
-        $tag = Tag::find($request->input('tag_id'));
-        $list->tags()->attach($tag);
+        return $this->attachTag($request, VideoList::class, $listId);
+    }
 
-        return response()->json(['message' => 'Tag attached to list']);
+    private function attachTag(Request $request, $modelClass, $modelId)
+    {
+        $model = $modelClass::findOrFail($modelId);
+        $tag = Tag::findOrFail($request->input('tag_id'));
+
+        $model->tags()->attach($tag);
+
+        return response()->json(['message' => 'Tag attached to ' . class_basename($modelClass)]);
     }
 }
 

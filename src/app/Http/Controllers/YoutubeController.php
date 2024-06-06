@@ -8,6 +8,7 @@ use Google_Service_YouTube;
 use Illuminate\Support\Facades\Storage;
 use App\Models\Channel;
 use App\Models\Video;
+use Carbon\Carbon;
 
 class YoutubeController extends Controller
 {
@@ -49,50 +50,48 @@ class YoutubeController extends Controller
 
     public function authenticate(Request $request)
     {
-        $client = $this->client;
-
         if (!$request->has('code')) {
-            return redirect()->away($client->createAuthUrl());
+            return redirect()->away($this->client->createAuthUrl());
         }
 
-        $client->authenticate($request->input('code'));
-        Storage::put('youtube_token.json', json_encode($client->getAccessToken()));
+        $this->client->authenticate($request->input('code'));
+        Storage::put('youtube_token.json', json_encode($this->client->getAccessToken()));
         return redirect()->route('youtube.channels');
     }
 
     public function getChannels()
     {
-
-        $channelsResponse = $this->youtube->channels->listChannels('snippet,contentDetails,statistics', [
-            'mine' => true,
-        ]);
+        $channelsResponse = $this->youtube->channels->listChannels('snippet,contentDetails,statistics', ['mine' => true]);
 
         foreach ($channelsResponse->getItems() as $channel) {
-            $lastUploadedDate = null;
-            $uploadsPlaylistId = $channel->getContentDetails()->getRelatedPlaylists()->getUploads();
-
-            $playlistItemsResponse = $this->youtube->playlistItems->listPlaylistItems('snippet', [
-                'playlistId' => $uploadsPlaylistId,
-                'maxResults' => 1,
-            ]);
-
-            if(count($playlistItemsResponse->getItems()) > 0){
-                $lastUploadDate = $playlistItemsResponse->getItems()[0]->getSnippet()->getPublishedAt();
-
-
-                Channel::updateOrCreate(
-                    ['youtube_id' => $channel->getId()],
-                    [
-                        'name' => $channel->getSnippet()->getTitle(),
-                        'category' => 'Uncategorized',
-                        'last_video_uploaded_at' => $lastUploadDate ? \Carbon\Carbon::parse($lastUploadDate)->format('Y-m-d H:i:s') : null,
-
-                    ]
-                );
-            }
+            $this->updateOrCreateChannel($channel);
         }
 
         return response()->json($channelsResponse);
+    }
+
+    private function updateOrCreateChannel($channel)
+    {
+        $lastUploadDate = null;
+        $uploadsPlaylistId = $channel->getContentDetails()->getRelatedPlaylists()->getUploads();
+
+        $playlistItemsResponse = $this->youtube->playlistItems->listPlaylistItems('snippet', [
+            'playlistId' => $uploadsPlaylistId,
+            'maxResults' => 1,
+        ]);
+
+        if (count($playlistItemsResponse->getItems()) > 0) {
+            $lastUploadDate = $playlistItemsResponse->getItems()[0]->getSnippet()->getPublishedAt();
+        }
+
+        Channel::updateOrCreate(
+            ['youtube_id' => $channel->getId()],
+            [
+                'name' => $channel->getSnippet()->getTitle(),
+                'category' => 'Uncategorized',
+                'last_video_uploaded_at' => $lastUploadDate ? Carbon::parse($lastUploadDate)->format('Y-m-d H:i:s') : null,
+            ]
+        );
     }
 
     public function getVideos(string $channelId)
@@ -107,46 +106,51 @@ class YoutubeController extends Controller
         ]);
 
         foreach ($videosResponse->getItems() as $video) {
-            $videoId = $video->getId()->getVideoId();
-            if (!in_array($videoId, $existingVideoIds)) {
-                $publishedAt = $video->getSnippet()->getPublishedAt();
-
-                Video::updateOrCreate(
-                    ['youtube_id' => $videoId],
-                    [
-                        'channel_id' => $channel->id,
-                        'title' => $video->getSnippet()->getTitle(),
-                        'published_at' => \Carbon\Carbon::parse($publishedAt)->format('Y-m-d H:i:s'),
-                    ]
-                );
-
-                $channel->last_video_uploaded_at = \Carbon\Carbon::parse($publishedAt)->format('Y-m-d H:i:s');
-                $channel->increment('unwatched_videos_count');
-                $channel->save();
-            }
+            $this->updateOrCreateVideo($channel, $video, $existingVideoIds);
         }
 
         return response()->json($videosResponse);
     }
-    public function getChannelVideos(Request $request, $channelId)
+
+    private function updateOrCreateVideo($channel, $video, $existingVideoIds)
+    {
+        $videoId = $video->getId()->getVideoId();
+        if (!in_array($videoId, $existingVideoIds)) {
+            $publishedAt = $video->getSnippet()->getPublishedAt();
+
+            Video::updateOrCreate(
+                ['youtube_id' => $videoId],
+                [
+                    'channel_id' => $channel->id,
+                    'title' => $video->getSnippet()->getTitle(),
+                    'published_at' => Carbon::parse($publishedAt)->format('Y-m-d H:i:s'),
+                ]
+            );
+
+            $channel->update([
+                'last_video_uploaded_at' => Carbon::parse($publishedAt)->format('Y-m-d H:i:s'),
+                'unwatched_videos_count' => $channel->unwatched_videos_count + 1,
+            ]);
+        }
+    }
+
+    public function getChannelVideos($channelId)
     {
         $videos = Video::where('channel_id', $channelId)->get();
         return response()->json($videos);
     }
 
-    public function markVideoAsWatched(Request $request, $videoId)
+    public function markVideoAsWatched($videoId)
     {
         $video = Video::where('youtube_id', $videoId)->firstOrFail();
-        if(!$video->watched) {
-            $video->watched = true;
-            $video->save();
+        if (!$video->watched) {
+            $video->update(['watched' => true, 'watched_at' => now()]);
 
-        // Actualizar la fecha del último video visto del canal
-            $channel = $video->channel;
-            $channel->last_video_watched_at = now();
-            $channel->increment('watched_videos_count');
-            $channel->decrement('unwatched_videos_count');
-            $channel->save();
+            $video->channel->update([
+                'last_video_watched_at' => now(),
+                'watched_videos_count' => $video->channel->watched_videos_count + 1,
+                'unwatched_videos_count' => $video->channel->unwatched_videos_count - 1,
+            ]);
         }
 
         return response()->json(['message' => 'Video marked as watched']);
@@ -155,15 +159,10 @@ class YoutubeController extends Controller
     public function getVideoCounts($channelId)
     {
         $channel = Channel::where('youtube_id', $channelId)->firstOrFail();
-        $watchedCount = $channel->watched_videos_count;
-        $unwatchedCount = $channel->unwatched_videos_count;
-
         return response()->json([
-            'watched_videos_count' => $watchedCount,
-            'unwatched_videos_count' => $unwatchedCount,
+            'watched_videos_count' => $channel->watched_videos_count,
+            'unwatched_videos_count' => $channel->unwatched_videos_count,
         ]);
     }
-
-
 }
 

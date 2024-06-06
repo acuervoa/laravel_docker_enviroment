@@ -8,7 +8,7 @@ use App\Models\Channel;
 
 class VideoController extends Controller
 {
-    public function index(Request $request)
+    public function index()
     {
         $videos = Video::with('channel')->get();
         return response()->json($videos);
@@ -27,15 +27,7 @@ class VideoController extends Controller
             return response()->json(['error' => 'Channel not found'], 404);
         }
 
-        $video = Video::create([
-            'channel_id' => $channel->id,
-            'title' => $request->title,
-            'youtube_id' => $request->youtube_id,
-            'like_count' => $request->like_count,
-            'published_at' => $request->published_at,
-            'watched' => $request->watched,
-            'rating' => $request->rating,
-        ]);
+        $video = Video::create($this->getValidatedData($request, $channel->id));
 
         return response()->json($video, 201);
     }
@@ -43,7 +35,6 @@ class VideoController extends Controller
     public function update(Request $request, $id)
     {
         $video = Video::findOrFail($id);
-
         $video->update($request->all());
 
         return response()->json($video);
@@ -57,28 +48,23 @@ class VideoController extends Controller
         return response()->json(null, 204);
     }
 
-    public function getVideoDetails(Request $request, $videoId)
+    public function getVideoDetails($videoId)
     {
-        $video = Video::where('id', $videoId)->with('channel')->firstOrFail();
-
+        $video = Video::with('channel')->findOrFail($videoId);
         return response()->json($video);
     }
 
-    public function likeVideo(Request $request, $videoId)
+    public function likeVideo($videoId)
     {
         $video = Video::findOrFail($videoId);
-        $video->likes += 1;
-        $video->save();
-
+        $video->increment('likes');
         return response()->json(['message' => 'Video liked', 'likes' => $video->likes]);
     }
 
-    public function dislikeVideo(Request $request, $videoId)
+    public function dislikeVideo($videoId)
     {
         $video = Video::findOrFail($videoId);
-        $video->dislikes += 1;
-        $video->save();
-
+        $video->increment('dislikes');
         return response()->json(['message' => 'Video disliked', 'dislikes' => $video->dislikes]);
     }
 
@@ -103,25 +89,20 @@ class VideoController extends Controller
         }
 
         $videos = $query->get();
-
         return response()->json($videos);
     }
 
-
-    public function markVideoAsWatched(Request $request, $videoId)
+    public function markVideoAsWatched($videoId)
     {
         $video = Video::where('youtube_id', $videoId)->firstOrFail();
         if (!$video->watched) {
-            $video->watched = true;
-            $video->watched_at = now();
-            $video->save();
+            $video->update(['watched' => true, 'watched_at' => now()]);
 
-            // Actualizar la fecha del último video visto del canal
-            $channel = $video->channel;
-            $channel->last_video_watched_at = now();
-            $channel->increment('watched_videos_count');
-            $channel->decrement('unwatched_videos_count');
-            $channel->save();
+            $video->channel->update([
+                'last_video_watched_at' => now(),
+                'watched_videos_count' => $video->channel->watched_videos_count + 1,
+                'unwatched_videos_count' => $video->channel->unwatched_videos_count - 1,
+            ]);
         }
 
         return response()->json(['message' => 'Video marked as watched']);
@@ -137,5 +118,16 @@ class VideoController extends Controller
         return response()->json($videos);
     }
 
+    private function getValidatedData(Request $request, $channelId)
+    {
+        return $request->validate([
+            'title' => 'required|string|max:255',
+            'youtube_id' => 'required|string|max:255',
+            'like_count' => 'integer|min:0',
+            'published_at' => 'required|date',
+            'watched' => 'boolean',
+            'rating' => 'integer|min:1|max:5',
+        ]) + ['channel_id' => $channelId];
+    }
 }
 

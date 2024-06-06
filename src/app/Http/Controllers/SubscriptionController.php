@@ -11,9 +11,9 @@ class SubscriptionController extends Controller
 {
     public function subscribe(Request $request)
     {
-        try{
+        try {
             $channel = Channel::where('youtube_id', $request->youtube_id)->first();
-            if(!$channel) {
+            if (!$channel) {
                 return response()->json(['error' => 'Channel not found'], 404);
             }
 
@@ -38,28 +38,27 @@ class SubscriptionController extends Controller
                 ->where('channel_id', $id)
                 ->first();
 
-            if(!$subscription) {
+            if (!$subscription) {
                 return response()->json(['error' => 'Subscription not found'], 404);
             }
 
             $subscription->delete();
 
             $channel = Channel::find($id);
-            if($channel && $channel->subscriber_count > 0){
+            if ($channel && $channel->subscriber_count > 0) {
                 $channel->decrement('subscriber_count');
             }
 
             return response()->json(null, 204);
-        } catch(\Exception $e) {
+        } catch (\Exception $e) {
             \Log::error('Error unsubscribing from channel: ' . $e->getMessage());
             return response()->json(['error' => 'Internal Server Error'], 500);
-
         }
     }
 
     public function index()
     {
-        try{
+        try {
             $subscriptions = Auth::user()->subscriptions()->with('channel')->get();
 
             return response()->json($subscriptions);
@@ -67,6 +66,6 @@ class SubscriptionController extends Controller
             \Log::error('Error fetching subscriptions: ' . $e->getMessage());
             return response()->json(['error' => 'Internal Server Error'], 500);
         }
-
     }
 }
+
