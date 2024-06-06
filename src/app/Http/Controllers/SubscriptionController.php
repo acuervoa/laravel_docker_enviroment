@@ -22,6 +22,8 @@ class SubscriptionController extends Controller
                 'channel_id' => $channel->id,
             ]);
 
+            $channel->increment('subscriber_count');
+
             return response()->json($subscription, 201);
         } catch (\Exception $e) {
             \Log::error('Error subscribing to channel: ' . $e->getMessage());
@@ -41,6 +43,11 @@ class SubscriptionController extends Controller
             }
 
             $subscription->delete();
+
+            $channel = Channel::find($id);
+            if($channel && $channel->subscriber_count > 0){
+                $channel->decrement('subscriber_count');
+            }
 
             return response()->json(null, 204);
         } catch(\Exception $e) {

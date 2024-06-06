@@ -15,7 +15,7 @@ class ChannelFactory extends Factory
             'name' => $this->faker->company,
             'youtube_id' => $this->faker->unique()->regexify('[A-Za-z0-9_-]{11}'),
             'category' => $this->faker->word,
-            'subscriber_count' => $this->faker->numberBetween(1000, 1000000),
+            'subscriber_count' => 0,
             //
         ];
     }

@@ -32,6 +32,10 @@ class SubscriptionTest extends TestCase
             'user_id' => $this->user->id,
             'channel_id' => $channel->id,
         ]);
+         $this->assertDatabaseHas('channels', [
+            'id' => $channel->id,
+            'subscriber_count' => 1,
+        ]);
     }
 
     public function test_user_can_unsubscribe_from_channel()
@@ -45,6 +49,10 @@ class SubscriptionTest extends TestCase
         $this->assertDatabaseMissing('subscriptions', [
             'user_id' => $this->user->id,
             'channel_id' => $channel->id,
+        ]);
+         $this->assertDatabaseHas('channels', [
+            'id' => $channel->id,
+            'subscriber_count' => 0,
         ]);
     }
 
