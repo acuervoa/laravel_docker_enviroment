@@ -5,29 +5,20 @@ namespace App\Models;
 use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Database\Eloquent\Model;
 
-class Channel extends Model
+class VideoList extends Model
 {
     use HasFactory;
 
-    protected $fillable = [
-        'name',
-        'youtube_id',
-        'category',
-        'subscriber_count',
-        'last_video_upload_at'
-    ];
+    protected $fillable = ['name'];
 
     public function videos()
     {
         return $this->hasMany(Video::class);
     }
 
-    public function subscribers()
-    {
-        return $this->hasMany(Subscription::class);
-    }
     public function tags()
     {
         return $this->morphToMany(Tag::class, 'taggable');
     }
 }
+

@@ -99,5 +99,11 @@ class YoutubeController extends Controller
 
         return response()->json($videosResponse);
     }
+    public function getChannelVideos(Request $request, $channelId)
+    {
+        $videos = Video::where('channel_id', $channelId)->get();
+        return response()->json($videos);
+    }
+
 }
 

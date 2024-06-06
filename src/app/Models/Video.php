@@ -9,11 +9,29 @@ class Video extends Model
 {
     use HasFactory;
 
-    protected $fillable = ['channel_id', 'title', 'youtube_id', 'like_count', 'published_at', 'watched', 'rating'];
+    protected $fillable = [
+        'channel_id',
+        'title',
+        'description',
+        'url',
+        'youtube_id',
+        'views',
+        'likes',
+        'dislikes',
+        'like_count',
+        'published_at',
+        'watched',
+        'rating'
+    ];
+
 
     public function channel()
     {
         return $this->belongsTo(Channel::class);
     }
 
+    public function tags()
+    {
+        return $this->morphToMany(Tag::class, 'taggable');
+    }
 }

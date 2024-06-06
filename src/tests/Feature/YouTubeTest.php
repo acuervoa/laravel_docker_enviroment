@@ -98,7 +98,8 @@ class YouTubeTest extends TestCase
         Video::create([
             'youtube_id' => 'Ks-_Mh1QhMc',
             'title' => 'Test Video',
-            'channel_id' => $channel->id
+            'channel_id' => $channel->id,
+            'published_at' => now(),
         ]);
 
         $response = $this->get('/youtube/videos/UC_x5XG1OV2P6uZZ5FSM9Ttw');

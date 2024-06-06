@@ -12,4 +12,4 @@ require __DIR__.'/subscription.php';
 require __DIR__.'/video.php';
 require __DIR__.'/notification.php';
 require __DIR__.'/youtube.php';
-
+require __DIR__.'/tags.php';
