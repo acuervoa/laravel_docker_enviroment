@@ -81,5 +81,30 @@ class VideoController extends Controller
 
         return response()->json(['message' => 'Video disliked', 'dislikes' => $video->dislikes]);
     }
+
+    public function search(Request $request)
+    {
+        $query = Video::query();
+
+        if ($request->filled('title')) {
+            $query->where('title', 'like', '%' . $request->input('title') . '%');
+        }
+
+        if ($request->filled('channel_id')) {
+            $query->where('channel_id', $request->input('channel_id'));
+        }
+
+        if ($request->filled('published_after')) {
+            $query->where('published_at', '>=', $request->input('published_after'));
+        }
+
+        if ($request->filled('published_before')) {
+            $query->where('published_at', '<=', $request->input('published_before'));
+        }
+
+        $videos = $query->get();
+
+        return response()->json($videos);
+    }
 }
 
