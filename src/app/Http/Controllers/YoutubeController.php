@@ -61,35 +61,41 @@ class YoutubeController extends Controller
 
     public function getChannels()
     {
-        $channelsResponse = $this->youtube->channels->listChannels('snippet,contentDetails,statistics', ['mine' => true]);
+        $channels = [];
+        $pageToken = null;
 
-        foreach ($channelsResponse->getItems() as $channel) {
-            $this->updateOrCreateChannel($channel);
-        }
+        do {
+            $response = $this->youtube->subscriptions->listSubscriptions('snippet', [
+                'mine' => true,
+                'maxResults' => 50,
+                'pageToken' => $pageToken,
+            ]);
 
-        return response()->json($channelsResponse);
+            foreach ($response->getItems() as $subscription) {
+                $channelId = $subscription->getSnippet()->getResourceId()->getChannelId();
+                $channelTitle = $subscription->getSnippet()->getTitle();
+
+                $channels[] = [
+                    'id' => $channelId,
+                    'title' => $channelTitle,
+                ];
+
+                $this->updateOrCreateChannel($channelId, $channelTitle);
+            }
+
+            $pageToken = $response->getNextPageToken();
+        } while ($pageToken);
+
+        return response()->json($channels);
     }
 
-    private function updateOrCreateChannel($channel)
+    private function updateOrCreateChannel($channelId, $channelTitle)
     {
-        $lastUploadDate = null;
-        $uploadsPlaylistId = $channel->getContentDetails()->getRelatedPlaylists()->getUploads();
-
-        $playlistItemsResponse = $this->youtube->playlistItems->listPlaylistItems('snippet', [
-            'playlistId' => $uploadsPlaylistId,
-            'maxResults' => 1,
-        ]);
-
-        if (count($playlistItemsResponse->getItems()) > 0) {
-            $lastUploadDate = $playlistItemsResponse->getItems()[0]->getSnippet()->getPublishedAt();
-        }
-
         Channel::updateOrCreate(
-            ['youtube_id' => $channel->getId()],
+            ['youtube_id' => $channelId],
             [
-                'name' => $channel->getSnippet()->getTitle(),
+                'name' => $channelTitle,
                 'category' => 'Uncategorized',
-                'last_video_uploaded_at' => $lastUploadDate ? Carbon::parse($lastUploadDate)->format('Y-m-d H:i:s') : null,
             ]
         );
     }
@@ -99,17 +105,23 @@ class YoutubeController extends Controller
         $channel = Channel::where('youtube_id', $channelId)->firstOrFail();
         $existingVideoIds = $channel->videos->pluck('youtube_id')->toArray();
 
-        $videosResponse = $this->youtube->search->listSearch('snippet', [
-            'channelId' => $channelId,
-            'maxResults' => 10,
-            'order' => 'date',
-        ]);
+        $pageToken = null;
+        do {
+            $response = $this->youtube->search->listSearch('snippet', [
+                'channelId' => $channelId,
+                'maxResults' => 50,
+                'order' => 'date',
+                'pageToken' => $pageToken,
+            ]);
 
-        foreach ($videosResponse->getItems() as $video) {
-            $this->updateOrCreateVideo($channel, $video, $existingVideoIds);
-        }
+            foreach ($response->getItems() as $video) {
+                $this->updateOrCreateVideo($channel, $video, $existingVideoIds);
+            }
 
-        return response()->json($videosResponse);
+            $pageToken = $response->getNextPageToken();
+        } while ($pageToken);
+
+        return response()->json(['message' => 'Videos updated successfully']);
     }
 
     private function updateOrCreateVideo($channel, $video, $existingVideoIds)

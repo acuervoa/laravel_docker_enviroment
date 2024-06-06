@@ -86,7 +86,7 @@ class YouTubeTest extends TestCase
 
         $this->assertDatabaseHas('channels', [
             'youtube_id' => 'UC_x5XG1OV2P6uZZ5FSM9Ttw',
-            'name' => 'Test Channel',
+            'name' => 'Google for Developers',
             'last_video_uploaded_at' => $timestamp,
         ]);
     }
