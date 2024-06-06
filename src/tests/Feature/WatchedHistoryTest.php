@@ -23,7 +23,7 @@ class WatchedHistoryTest extends TestCase
     public function test_get_watched_history()
     {
         $channel = Channel::factory()->create();
-        Subscription::create(['user_id' => $this->user->id, 'channel_id' => $channel->id]);
+        Subscription::factory()->create(['user_id' => $this->user->id, 'channel_id' => $channel->id]);
 
         $video1 = Video::factory()->create(['channel_id' => $channel->id, 'watched' => true, 'watched_at' => now()->subDays(2)]);
         $video2 = Video::factory()->create(['channel_id' => $channel->id, 'watched' => true, 'watched_at' => now()->subDay()]);

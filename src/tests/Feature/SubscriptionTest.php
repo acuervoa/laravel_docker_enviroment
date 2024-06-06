@@ -32,7 +32,7 @@ class SubscriptionTest extends TestCase
             'user_id' => $this->user->id,
             'channel_id' => $channel->id,
         ]);
-         $this->assertDatabaseHas('channels', [
+        $this->assertDatabaseHas('channels', [
             'id' => $channel->id,
             'subscriber_count' => 1,
         ]);
@@ -41,7 +41,7 @@ class SubscriptionTest extends TestCase
     public function test_user_can_unsubscribe_from_channel()
     {
         $channel = Channel::factory()->create();
-        $subscription = Subscription::create(['user_id' => $this->user->id, 'channel_id' => $channel->id]);
+        Subscription::factory()->create(['user_id' => $this->user->id, 'channel_id' => $channel->id]);
 
         $response = $this->delete('/unsubscribe/' . $channel->id);
 
@@ -50,7 +50,7 @@ class SubscriptionTest extends TestCase
             'user_id' => $this->user->id,
             'channel_id' => $channel->id,
         ]);
-         $this->assertDatabaseHas('channels', [
+        $this->assertDatabaseHas('channels', [
             'id' => $channel->id,
             'subscriber_count' => 0,
         ]);
@@ -63,9 +63,9 @@ class SubscriptionTest extends TestCase
         $response = $this->get('/subscriptions');
 
         $response->assertStatus(200)
-            ->assertJsonFragment([
-                'channel_id' => $subscription->channel_id,
-            ]);
+                 ->assertJsonFragment([
+                     'channel_id' => $subscription->channel_id,
+                 ]);
     }
 }
 

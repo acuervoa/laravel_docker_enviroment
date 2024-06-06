@@ -72,7 +72,6 @@ class YouTubeTest extends TestCase
 
     public function test_get_channels_from_db(): void
     {
-
         $timestamp = now()->format('Y-m-d H:i:s');
 
         Channel::create([
@@ -81,7 +80,6 @@ class YouTubeTest extends TestCase
             'category' => 'Test Category',
             'last_video_uploaded_at' => $timestamp,
         ]);
-        var_dump($timestamp);
 
         $response = $this->get('/youtube/channels');
         $response->assertStatus(200);
@@ -95,7 +93,6 @@ class YouTubeTest extends TestCase
 
     public function test_get_videos_from_db(): void
     {
-
         $timestamp = now()->format('Y-m-d H:i:s');
 
         $channel = Channel::create([
@@ -130,7 +127,6 @@ class YouTubeTest extends TestCase
 
     public function test_mark_video_as_watched(): void
     {
-
         $timestamp = now();
 
         $channel = Channel::create([
@@ -161,10 +157,9 @@ class YouTubeTest extends TestCase
             'watched_videos_count' => 1,
             'unwatched_videos_count' => 0,
         ]);
-
     }
 
-     public function test_get_video_counts(): void
+    public function test_get_video_counts(): void
     {
         $channel = Channel::create([
             'youtube_id' => 'UC_x5XG1OV2P6uZZ5FSM9Ttw',

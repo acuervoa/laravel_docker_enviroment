@@ -23,15 +23,7 @@ class VideoTest extends TestCase
     {
         $channel = Channel::factory()->create();
 
-        $response = $this->post('/videos', [
-            'channel_youtube_id' => $channel->youtube_id,
-            'title' => 'Test Video',
-            'youtube_id' => 'Ks-_Mh1QhMc',
-            'like_count' => 100,
-            'published_at' => now(),
-            'watched' => false,
-            'rating' => 5,
-        ]);
+        $response = $this->post('/videos', $this->getVideoData($channel->youtube_id));
 
         $response->assertStatus(201);
         $this->assertDatabaseHas('videos', [
@@ -47,9 +39,9 @@ class VideoTest extends TestCase
         $response = $this->get('/videos');
 
         $response->assertStatus(200)
-            ->assertJsonFragment([
-                'title' => $video->title,
-            ]);
+                 ->assertJsonFragment([
+                     'title' => $video->title,
+                 ]);
     }
 
     public function test_user_can_view_single_video()
@@ -59,9 +51,9 @@ class VideoTest extends TestCase
         $response = $this->get('/videos/' . $video->id);
 
         $response->assertStatus(200)
-            ->assertJsonFragment([
-                'title' => $video->title,
-            ]);
+                 ->assertJsonFragment([
+                     'title' => $video->title,
+                 ]);
     }
 
     public function test_user_can_update_video()
@@ -89,6 +81,19 @@ class VideoTest extends TestCase
         $this->assertDatabaseMissing('videos', [
             'id' => $video->id,
         ]);
+    }
+
+    private function getVideoData($youtubeId)
+    {
+        return [
+            'channel_youtube_id' => $youtubeId,
+            'title' => 'Test Video',
+            'youtube_id' => 'Ks-_Mh1QhMc',
+            'like_count' => 100,
+            'published_at' => now(),
+            'watched' => false,
+            'rating' => 5,
+        ];
     }
 }
 

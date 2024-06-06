@@ -16,7 +16,7 @@ class TagTest extends TestCase
     public function test_create_tag()
     {
         $response = $this->postJson('/tags', ['name' => 'Test Tag']);
-        $response->assertStatus(201);  // Esperar 201
+        $response->assertStatus(201);
         $this->assertDatabaseHas('tags', ['name' => 'Test Tag']);
     }
 
@@ -25,7 +25,7 @@ class TagTest extends TestCase
         $tag = Tag::create(['name' => 'Test Tag']);
         $video = Video::factory()->create();
 
-        $response = $this->postJson("/videos/{$video->id}/tags", ['tag_id' => $tag->id]);
+        $response = $this->attachTag($tag, $video, 'video');
         $response->assertStatus(200);
         $this->assertDatabaseHas('taggables', [
             'tag_id' => $tag->id,
@@ -39,7 +39,7 @@ class TagTest extends TestCase
         $tag = Tag::create(['name' => 'Test Tag']);
         $channel = Channel::factory()->create();
 
-        $response = $this->postJson("/channels/{$channel->id}/tags", ['tag_id' => $tag->id]);
+        $response = $this->attachTag($tag, $channel, 'channel');
         $response->assertStatus(200);
         $this->assertDatabaseHas('taggables', [
             'tag_id' => $tag->id,
@@ -53,13 +53,18 @@ class TagTest extends TestCase
         $tag = Tag::create(['name' => 'Test Tag']);
         $list = VideoList::factory()->create();
 
-        $response = $this->postJson("/lists/{$list->id}/tags", ['tag_id' => $tag->id]);
+        $response = $this->attachTag($tag, $list, 'list');
         $response->assertStatus(200);
         $this->assertDatabaseHas('taggables', [
             'tag_id' => $tag->id,
             'taggable_id' => $list->id,
             'taggable_type' => VideoList::class,
         ]);
+    }
+
+    private function attachTag($tag, $model, $type)
+    {
+        return $this->postJson("/{$type}s/{$model->id}/tags", ['tag_id' => $tag->id]);
     }
 }
 

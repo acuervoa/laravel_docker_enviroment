@@ -22,10 +22,10 @@ class VideoSearchTest extends TestCase
     public function test_search_videos_by_title()
     {
         $channel = Channel::factory()->create();
-        $video1 = Video::factory()->create(['title' => 'Test Video 1', 'channel_id' => $channel->id]);
-        $video2 = Video::factory()->create(['title' => 'Another Video', 'channel_id' => $channel->id]);
+        $this->createVideo($channel, 'Test Video 1');
+        $this->createVideo($channel, 'Another Video');
 
-        $response = $this->actingAs($this->user)->get('/videos/search?title=Test');
+        $response = $this->get('/videos/search?title=Test');
         $response->assertStatus(200)
                  ->assertJsonFragment(['title' => 'Test Video 1'])
                  ->assertJsonMissing(['title' => 'Another Video']);
@@ -35,10 +35,10 @@ class VideoSearchTest extends TestCase
     {
         $channel1 = Channel::factory()->create();
         $channel2 = Channel::factory()->create();
-        $video1 = Video::factory()->create(['title' => 'Test Video 1', 'channel_id' => $channel1->id]);
-        $video2 = Video::factory()->create(['title' => 'Another Video', 'channel_id' => $channel2->id]);
+        $this->createVideo($channel1, 'Test Video 1');
+        $this->createVideo($channel2, 'Another Video');
 
-        $response = $this->actingAs($this->user)->get('/videos/search?channel_id=' . $channel1->id);
+        $response = $this->get('/videos/search?channel_id=' . $channel1->id);
         $response->assertStatus(200)
                  ->assertJsonFragment(['title' => 'Test Video 1'])
                  ->assertJsonMissing(['title' => 'Another Video']);
@@ -47,13 +47,22 @@ class VideoSearchTest extends TestCase
     public function test_search_videos_by_date_range()
     {
         $channel = Channel::factory()->create();
-        $video1 = Video::factory()->create(['title' => 'Test Video 1', 'channel_id' => $channel->id, 'published_at' => now()->subDays(5)]);
-        $video2 = Video::factory()->create(['title' => 'Another Video', 'channel_id' => $channel->id, 'published_at' => now()->subDays(15)]);
+        $this->createVideo($channel, 'Test Video 1', now()->subDays(5));
+        $this->createVideo($channel, 'Another Video', now()->subDays(15));
 
-        $response = $this->actingAs($this->user)->get('/videos/search?published_after=' . now()->subDays(10)->toDateString());
+        $response = $this->get('/videos/search?published_after=' . now()->subDays(10)->toDateString());
         $response->assertStatus(200)
                  ->assertJsonFragment(['title' => 'Test Video 1'])
                  ->assertJsonMissing(['title' => 'Another Video']);
+    }
+
+    private function createVideo($channel, $title, $publishedAt = null)
+    {
+        return Video::factory()->create([
+            'channel_id' => $channel->id,
+            'title' => $title,
+            'published_at' => $publishedAt ?? now(),
+        ]);
     }
 }
 
