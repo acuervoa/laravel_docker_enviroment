@@ -14,7 +14,8 @@ class Channel extends Model
         'youtube_id',
         'category',
         'subscriber_count',
-        'last_video_upload_at'
+        'last_video_uploaded_at',
+        'last_video_watched_at'
     ];
 
     public function videos()
