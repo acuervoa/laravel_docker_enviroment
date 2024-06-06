@@ -21,7 +21,8 @@ class Video extends Model
         'like_count',
         'published_at',
         'watched',
-        'rating'
+        'rating',
+        'watched_at'
     ];
 
 

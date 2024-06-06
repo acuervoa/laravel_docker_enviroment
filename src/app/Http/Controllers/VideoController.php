@@ -106,5 +106,36 @@ class VideoController extends Controller
 
         return response()->json($videos);
     }
+
+
+    public function markVideoAsWatched(Request $request, $videoId)
+    {
+        $video = Video::where('youtube_id', $videoId)->firstOrFail();
+        if (!$video->watched) {
+            $video->watched = true;
+            $video->watched_at = now();
+            $video->save();
+
+            // Actualizar la fecha del último video visto del canal
+            $channel = $video->channel;
+            $channel->last_video_watched_at = now();
+            $channel->increment('watched_videos_count');
+            $channel->decrement('unwatched_videos_count');
+            $channel->save();
+        }
+
+        return response()->json(['message' => 'Video marked as watched']);
+    }
+
+    public function getWatchedHistory(Request $request)
+    {
+        $user = $request->user();
+        $videos = Video::whereHas('channel.subscribers', function ($query) use ($user) {
+            $query->where('user_id', $user->id);
+        })->whereNotNull('watched_at')->orderBy('watched_at', 'desc')->get();
+
+        return response()->json($videos);
+    }
+
 }
 
