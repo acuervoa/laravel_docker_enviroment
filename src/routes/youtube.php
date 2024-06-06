@@ -11,5 +11,7 @@ Route::middleware(['auth','youtube.quota'])->group(function () {
     Route::get('/youtube/save-videos/{channelId}', [YoutubeController::class, 'saveVideosToDatabase']);
 
     Route::post('/videos/{videoId}/watch', [YoutubeController::class, 'markVideoAsWatched']);
+
+    Route::get('/channels/{channelId}/video-counts', [YoutubeController::class, 'getVideoCounts']);
 });
 

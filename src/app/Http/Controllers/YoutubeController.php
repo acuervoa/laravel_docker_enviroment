@@ -121,6 +121,7 @@ class YoutubeController extends Controller
                 );
 
                 $channel->last_video_uploaded_at = \Carbon\Carbon::parse($publishedAt)->format('Y-m-d H:i:s');
+                $channel->increment('unwatched_videos_count');
                 $channel->save();
             }
         }
@@ -136,16 +137,33 @@ class YoutubeController extends Controller
     public function markVideoAsWatched(Request $request, $videoId)
     {
         $video = Video::where('youtube_id', $videoId)->firstOrFail();
-        $video->watched = true;
-        $video->save();
+        if(!$video->watched) {
+            $video->watched = true;
+            $video->save();
 
         // Actualizar la fecha del último video visto del canal
-        $channel = $video->channel;
-        $channel->last_video_watched_at = now();
-        $channel->save();
+            $channel = $video->channel;
+            $channel->last_video_watched_at = now();
+            $channel->increment('watched_videos_count');
+            $channel->decrement('unwatched_videos_count');
+            $channel->save();
+        }
 
         return response()->json(['message' => 'Video marked as watched']);
     }
+
+    public function getVideoCounts($channelId)
+    {
+        $channel = Channel::where('youtube_id', $channelId)->firstOrFail();
+        $watchedCount = $channel->watched_videos_count;
+        $unwatchedCount = $channel->unwatched_videos_count;
+
+        return response()->json([
+            'watched_videos_count' => $watchedCount,
+            'unwatched_videos_count' => $unwatchedCount,
+        ]);
+    }
+
 
 }
 

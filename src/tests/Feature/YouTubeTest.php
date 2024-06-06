@@ -103,6 +103,7 @@ class YouTubeTest extends TestCase
             'name' => 'Test Channel',
             'category' => 'Test Category',
             'last_video_uploaded_at' => $timestamp,
+            'unwatched_videos_count' => 1,
         ]);
 
         Video::create([
@@ -122,7 +123,8 @@ class YouTubeTest extends TestCase
 
         $this->assertDatabaseHas('channels', [
             'youtube_id' => 'UC_x5XG1OV2P6uZZ5FSM9Ttw',
-             'last_video_uploaded_at' => $timestamp,
+            'last_video_uploaded_at' => $timestamp,
+            'unwatched_videos_count' => 1,
         ]);
     }
 
@@ -135,6 +137,7 @@ class YouTubeTest extends TestCase
             'youtube_id' => 'UC_x5XG1OV2P6uZZ5FSM9Ttw',
             'name' => 'Test Channel',
             'category' => 'Test Category',
+            'unwatched_videos_count' => 1,
         ]);
 
         $video = Video::create([
@@ -155,8 +158,28 @@ class YouTubeTest extends TestCase
         $this->assertDatabaseHas('channels', [
             'id' => $channel->id,
             'last_video_watched_at' => $timestamp,
+            'watched_videos_count' => 1,
+            'unwatched_videos_count' => 0,
         ]);
+
     }
 
+     public function test_get_video_counts(): void
+    {
+        $channel = Channel::create([
+            'youtube_id' => 'UC_x5XG1OV2P6uZZ5FSM9Ttw',
+            'name' => 'Test Channel',
+            'category' => 'Test Category',
+            'watched_videos_count' => 2,
+            'unwatched_videos_count' => 3,
+        ]);
+
+        $response = $this->get("/channels/{$channel->youtube_id}/video-counts");
+        $response->assertStatus(200)
+            ->assertJson([
+                'watched_videos_count' => 2,
+                'unwatched_videos_count' => 3,
+            ]);
+    }
 }
 
