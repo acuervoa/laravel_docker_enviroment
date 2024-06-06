@@ -17,6 +17,8 @@ return new class extends Migration
             $table->string('title');
             $table->string('youtube_id')->unique();
             $table->integer('like_count')->default(0);
+            $table->integer('likes')->default(0);
+            $table->integer('dislikes')->default(0);
             $table->timestamp('published_at');
             $table->boolean('watched')->default(false);
             $table->integer('rating')->nullable();

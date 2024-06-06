@@ -56,5 +56,30 @@ class VideoController extends Controller
 
         return response()->json(null, 204);
     }
+
+    public function getVideoDetails(Request $request, $videoId)
+    {
+        $video = Video::where('id', $videoId)->with('channel')->firstOrFail();
+
+        return response()->json($video);
+    }
+
+    public function likeVideo(Request $request, $videoId)
+    {
+        $video = Video::findOrFail($videoId);
+        $video->likes += 1;
+        $video->save();
+
+        return response()->json(['message' => 'Video liked', 'likes' => $video->likes]);
+    }
+
+    public function dislikeVideo(Request $request, $videoId)
+    {
+        $video = Video::findOrFail($videoId);
+        $video->dislikes += 1;
+        $video->save();
+
+        return response()->json(['message' => 'Video disliked', 'dislikes' => $video->dislikes]);
+    }
 }
 

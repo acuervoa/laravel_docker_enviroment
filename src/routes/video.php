@@ -8,5 +8,8 @@ Route::middleware('auth')->group(function () {
     Route::post('/videos', [VideoController::class, 'store']);
     Route::put('/videos/{id}', [VideoController::class, 'update']);
     Route::delete('/videos/{id}', [VideoController::class, 'destroy']);
+
+    Route::post('/videos/{videoId}/like', [VideoController::class, 'likeVideo']);
+    Route::post('/videos/{videoId}/dislike', [VideoController::class, 'dislikeVideo']);
 });
 
